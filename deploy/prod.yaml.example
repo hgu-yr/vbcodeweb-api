@@ -1,4 +1,18 @@
-# 生产配置模板：复制为 prod.yaml 放在部署目录，不要提交到仓库
+# 生产配置模板（二选一）
+#
+# 方式一：文件配置
+#   复制本文件为 prod.yaml 放在运行目录（与可执行文件同级），不要提交到仓库。
+#   程序会读取 $APP_ENV.yaml，APP_ENV 为空时用 dev.yaml。
+#
+# 方式二：环境变量（推荐用于 Railway / Docker 等云平台）
+#   不提供 yaml 文件也可以，使用下列环境变量注入配置，会覆盖 yaml 中的同名项：
+#     DB_HOST / DB_PORT / DB_USER / DB_PASSWORD / DB_NAME / DB_CHARSET
+#     DB_MAX_OPEN_CONNS / DB_MAX_IDLE_CONNS / DB_CONN_MAX_LIFETIME
+#     JWT_SECRET / JWT_EXPIRE
+#   同时兼容 Railway/Heroku MySQL 插件注入的别名：
+#     MYSQLHOST / MYSQLPORT / MYSQLUSER / MYSQLPASSWORD / MYSQLDATABASE
+#   监听端口优先读取环境变量 PORT（默认 8899）。
+
 database:
   host: 127.0.0.1
   port: 3306
