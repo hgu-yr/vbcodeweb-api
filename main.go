@@ -41,6 +41,12 @@ func main() {
 	authSvc := service.NewAuthService(*userRepo)
 	authCtrl := handler.NewAuthController(*authSvc)
 
+	// 云平台（如 Railway）通过 PORT 环境变量指定监听端口，默认 8899
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8899"
+	}
+
 	r := router.InitRouter(categoryCtrl, productCtrl, miniProgramCtrl, articleCtrl, authCtrl)
-	r.Run(":8899")
+	r.Run(":" + port)
 }

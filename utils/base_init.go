@@ -2,8 +2,11 @@ package utils
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/goccy/go-yaml"
 	"gorm.io/driver/mysql"
@@ -38,6 +41,8 @@ var (
 )
 
 // LoadConfig 读取环境对应的 yaml 配置文件，默认使用 dev.yaml。
+// 配置文件为可选：不存在时（如容器/云平台仅通过环境变量注入配置）不报错，
+// 加载后再用环境变量覆盖，便于在 Railway/Heroku 等平台部署。
 func LoadConfig() (*Config, error) {
 	env := os.Getenv("APP_ENV")
 	if env == "" {
@@ -45,19 +50,69 @@ func LoadConfig() (*Config, error) {
 	}
 	path := fmt.Sprintf("%s.yaml", env)
 
-	data, err := os.ReadFile(path)
-	if err != nil {
+	var cfg Config
+	if data, err := os.ReadFile(path); err == nil {
+		if err := yaml.Unmarshal(data, &cfg); err != nil {
+			return nil, fmt.Errorf("decode config %s: %w", path, err)
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("read config %s: %w", path, err)
 	}
 
-	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("decode config %s: %w", path, err)
-	}
+	applyEnvOverrides(&cfg)
+
 	if cfg.Database.Host == "" || cfg.Database.User == "" || cfg.Database.Name == "" {
 		return nil, fmt.Errorf("database host, user and name are required")
 	}
 	return &cfg, nil
+}
+
+// applyEnvOverrides 用环境变量覆盖配置，未设置的环境变量保持 yaml 中的原值。
+// 同时兼容 Railway/Heroku 等平台 MySQL 插件注入的 MYSQL* 变量。
+func applyEnvOverrides(cfg *Config) {
+	setString(&cfg.Database.Host, "DB_HOST", "DATABASE_HOST", "MYSQLHOST")
+	setInt(&cfg.Database.Port, "DB_PORT", "DATABASE_PORT", "MYSQLPORT")
+	setString(&cfg.Database.User, "DB_USER", "DATABASE_USER", "MYSQLUSER")
+	setString(&cfg.Database.Password, "DB_PASSWORD", "DATABASE_PASSWORD", "MYSQLPASSWORD")
+	setString(&cfg.Database.Name, "DB_NAME", "DATABASE_NAME", "MYSQLDATABASE")
+	setString(&cfg.Database.Charset, "DB_CHARSET", "DATABASE_CHARSET")
+	setInt(&cfg.Database.MaxOpenConns, "DB_MAX_OPEN_CONNS")
+	setInt(&cfg.Database.MaxIdleConns, "DB_MAX_IDLE_CONNS")
+	setDuration(&cfg.Database.ConnMaxLifetime, "DB_CONN_MAX_LIFETIME")
+	setString(&cfg.JWT.Secret, "JWT_SECRET")
+	setDuration(&cfg.JWT.Expire, "JWT_EXPIRE")
+}
+
+// firstEnv 返回第一个非空环境变量的值。
+func firstEnv(keys ...string) (string, bool) {
+	for _, k := range keys {
+		if v := os.Getenv(k); v != "" {
+			return v, true
+		}
+	}
+	return "", false
+}
+
+func setString(dst *string, keys ...string) {
+	if v, ok := firstEnv(keys...); ok {
+		*dst = v
+	}
+}
+
+func setInt(dst *int, keys ...string) {
+	if v, ok := firstEnv(keys...); ok {
+		if n, err := strconv.Atoi(v); err == nil {
+			*dst = n
+		}
+	}
+}
+
+func setDuration(dst *time.Duration, keys ...string) {
+	if v, ok := firstEnv(keys...); ok {
+		if d, err := time.ParseDuration(v); err == nil {
+			*dst = d
+		}
+	}
 }
 
 // InitDB 加载配置、创建数据库、初始化连接池并迁移模型。
