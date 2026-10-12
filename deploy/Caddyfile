@@ -1,0 +1,10 @@
+# Caddy：自动申请/续期 HTTPS，反代前端与后端
+# 替换成你自己的域名后：caddy run --config deploy/Caddyfile
+
+example.com {
+	reverse_proxy 127.0.0.1:3000
+}
+
+api.example.com {
+	reverse_proxy 127.0.0.1:8899
+}

@@ -1,0 +1,55 @@
+# GitLab CI 版本。CI/CD Variables 需配置：SSH_KEY、SERVER
+stages: [build, deploy]
+
+build-backend:
+  stage: build
+  image: golang:1.26
+  script:
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o vbcodeweb .
+  artifacts:
+    paths: [vbcodeweb]
+    expire_in: 1 hour
+
+build-frontend:
+  stage: build
+  image: node:22
+  variables:
+    NEXT_PUBLIC_API_BASE: https://api.example.com
+  script:
+    - cd web
+    - npm ci
+    - npm run build
+    - cp -r .next/static .next/standalone/.next/static
+    - cp -r public .next/standalone/public
+    - tar czf ../web.tar.gz -C .next/standalone .
+  artifacts:
+    paths: [web.tar.gz]
+    expire_in: 1 hour
+
+.deploy-setup: &deploy-setup
+  image: alpine:3.20
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_KEY" | ssh-add -
+    - mkdir -p ~/.ssh && ssh-keyscan -H "$SERVER" >> ~/.ssh/known_hosts 2>/dev/null
+
+deploy-backend:
+  stage: deploy
+  needs: [build-backend]
+  <<: *deploy-setup
+  script:
+    - scp vbcodeweb deploy@$SERVER:/opt/vbcodeweb/vbcodeweb.new
+    - ssh deploy@$SERVER 'mv /opt/vbcodeweb/vbcodeweb.new /opt/vbcodeweb/vbcodeweb && sudo systemctl restart vbcodeweb'
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+deploy-frontend:
+  stage: deploy
+  needs: [build-frontend]
+  <<: *deploy-setup
+  script:
+    - scp web.tar.gz deploy@$SERVER:/tmp/web.tar.gz
+    - ssh deploy@$SERVER 'rm -rf /opt/vbcodeweb-web/* && tar xzf /tmp/web.tar.gz -C /opt/vbcodeweb-web && sudo systemctl restart vbcodeweb-web'
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"

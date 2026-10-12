@@ -1,0 +1,13 @@
+.git
+.gitignore
+*.md
+*.log
+.DS_Store
+
+# 配置文件含密码，不编进镜像，运行时挂载
+*.yaml
+*.yml
+!go.mod
+
+# 前端单独构建
+web

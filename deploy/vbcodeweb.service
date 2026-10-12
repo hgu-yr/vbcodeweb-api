@@ -1,0 +1,24 @@
+[Unit]
+Description=vbCodeWeb API (Go / Gin)
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=simple
+User=vbcodeweb
+Group=vbcodeweb
+WorkingDirectory=/opt/vbcodeweb
+Environment=APP_ENV=prod
+Environment=GIN_MODE=release
+ExecStart=/opt/vbcodeweb/vbcodeweb
+Restart=always
+RestartSec=3
+
+# 安全加固
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

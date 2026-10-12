@@ -1,0 +1,26 @@
+[Unit]
+Description=vbCodeWeb Web (Next.js)
+After=network.target vbcodeweb.service
+Wants=vbcodeweb.service
+
+[Service]
+Type=simple
+User=vbcodeweb
+Group=vbcodeweb
+WorkingDirectory=/opt/vbcodeweb-web
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=0.0.0.0
+# 注意：NEXT_PUBLIC_* 在构建时注入，改这里对已构建产物无效，需重新 build
+Environment=NEXT_PUBLIC_API_BASE=https://api.example.com
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

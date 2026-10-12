@@ -1,0 +1,27 @@
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: vbcodeweb-api:latest
+    environment:
+      - APP_ENV=prod
+      - GIN_MODE=release
+    volumes:
+      - ./prod.yaml:/app/prod.yaml:ro
+    ports:
+      - "8899:8899"
+    restart: always
+
+  web:
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+    image: vbcodeweb-web:latest
+    environment:
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: always

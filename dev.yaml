@@ -1,0 +1,14 @@
+database:
+  host: 192.168.1.7
+  port: 3306
+  user: root
+  password: "123456"
+  name: vbcodeweb
+  charset: utf8mb4
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_max_lifetime: 30m
+
+jwt:
+  secret: "vbcodeweb-dev-secret-change-me"
+  expire: 24h

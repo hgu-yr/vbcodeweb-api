@@ -1,0 +1,23 @@
+# 生产配置（含密码），禁止提交
+prod.yaml
+deploy/prod.yaml
+deploy/*.env
+
+# 构建产物
+/vbcodeweb
+*.tar.gz
+
+# 前端
+web/node_modules
+web/.next
+web/out
+
+# Go
+*.exe
+*.test
+*.out
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
