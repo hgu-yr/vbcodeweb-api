@@ -27,9 +27,29 @@
 如果数据库用户没有建库权限，`CREATE DATABASE` 会报权限错误；此时把 `MYSQLDATABASE`
 设为已存在的库名即可。
 
-## 3. 监听端口
+## 3. 监听端口（最容易踩坑）
 
-程序优先读取环境变量 `PORT`（Railway 自动注入），无需手动设置。
+程序监听环境变量 `PORT`，未设置时回退到 **8899**。
+
+> ⚠️ Railway **不一定**会替你注入 `PORT`。如果你在 **Settings → Networking** 的
+> 域名里把 **target port** 设成了某个值（例如 `8888`），就必须在 Variables 里
+> 显式设置 `PORT=8888`，**两者必须一致**，否则请求无法到达容器。
+
+不一致时的表现：
+
+```json
+HTTP 502 {"status":"error","code":502,"message":"Application failed to respond"}
+```
+
+排查要点：
+
+- 部署状态是 `SUCCESS`、日志也有「数据库初始化成功！！！」，却仍是 502 → 基本就是端口不一致；
+- `GIN_MODE=release` 下 gin **不会**打印 `Listening and serving HTTP on :xxxx`，
+  别据此以为进程没起来（这也是本项目曾误判的原因）；
+- 用 Railway API 查看域名实际 target port：
+  `serviceInstance(serviceId, environmentId) { domains { serviceDomains { domain targetPort } } }`。
+
+不想管理端口的话：**删掉自定义 target port**，或把 `PORT` 设成与 target port 一致的值。
 
 ## 4. 初始化管理员
 
@@ -43,8 +63,20 @@ railway run --service <api 服务名> ./vbcodeweb seed
 
 ## 5. 公网域名
 
-在 api 服务 **Settings → Networking → Generate Domain** 生成公网地址，
-把它填到前端服务的 `NEXT_PUBLIC_API_BASE`。
+在 api 服务 **Settings → Networking → Generate Domain** 生成公网地址。
+
+前端服务 `vbcodeweb-web` 需要把该地址填到：
+
+```
+NEXT_PUBLIC_API_BASE = https://vbcodeweb-api-production.up.railway.app
+```
+
+> ⚠️ 两个坑：
+> 1. **必须带 `https://`**。前端用服务端 `fetch`，Node 对非绝对 URL 会直接抛错，
+>    错误被 `catch` 吞掉后页面就显示成「共 0 个工具 / 暂无数据」——看起来像没数据，
+>    其实是请求根本没发出。
+> 2. 该变量是**构建期**注入（Dockerfile 里的 `ARG NEXT_PUBLIC_API_BASE`），改完必须
+>    **Redeploy 重新构建**，只重启无效。
 
 ## 6. 关于 railway.json
 
