@@ -41,12 +41,20 @@ func main() {
 	authSvc := service.NewAuthService(*userRepo)
 	authCtrl := handler.NewAuthController(*authSvc)
 
+	uploadRepo := repo.NewUploadRepo(db)
+	uploadSvc := service.NewUploadService(*uploadRepo)
+	uploadCtrl := handler.NewUploadController(*uploadSvc)
+
+	submissionRepo := repo.NewSubmissionRepo(db)
+	submissionSvc := service.NewSubmissionService(*submissionRepo, *productRepo, *miniProgramRepo, *uploadSvc)
+	submissionCtrl := handler.NewSubmissionController(*submissionSvc)
+
 	// 云平台（如 Railway）通过 PORT 环境变量指定监听端口，默认 8899
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8899"
 	}
 
-	r := router.InitRouter(categoryCtrl, productCtrl, miniProgramCtrl, articleCtrl, authCtrl)
+	r := router.InitRouter(categoryCtrl, productCtrl, miniProgramCtrl, articleCtrl, authCtrl, submissionCtrl, uploadCtrl)
 	r.Run(":" + port)
 }

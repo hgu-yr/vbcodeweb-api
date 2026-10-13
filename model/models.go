@@ -8,5 +8,7 @@ func Models() []any {
 		&Product{},
 		&MiniProgram{},
 		&Article{},
+		&Submission{},
+		&Upload{},
 	}
 }

@@ -14,6 +14,8 @@ func InitRouter(
 	miniProgram *handler.MiniProgramController,
 	article *handler.ArticleController,
 	auth *handler.AuthController,
+	submission *handler.SubmissionController,
+	upload *handler.UploadController,
 ) *gin.Engine {
 	r := gin.Default()
 	r.Use(middleware.CORS())
@@ -46,6 +48,12 @@ func InitRouter(
 		api.GET("/articles/:id", article.Detail)
 		api.POST("/articles/:id/view", article.View)
 
+		// 用户投稿（公开，无需登录）
+		api.POST("/submissions", submission.Create)
+
+		// 用户上传的图片（公开读取）
+		api.GET("/uploads/:id", upload.Get)
+
 		// 以下写操作需要登录
 		admin := api.Group("", middleware.JWTAuth())
 		{
@@ -64,6 +72,13 @@ func InitRouter(
 			admin.POST("/articles", article.Create)
 			admin.PUT("/articles", article.Update)
 			admin.DELETE("/articles/:id", article.Delete)
+
+			// 投稿审核
+			admin.GET("/submissions", submission.List)
+			admin.GET("/submissions/pending", submission.Pending)
+			admin.POST("/submissions/:id/approve", submission.Approve)
+			admin.POST("/submissions/:id/reject", submission.Reject)
+			admin.DELETE("/submissions/:id", submission.Delete)
 		}
 	}
 	return r
